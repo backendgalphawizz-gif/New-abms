@@ -1,0 +1,46 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class RenameAndRemoveColSellerWallet extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        if (! Schema::hasTable('seller_wallets')) {
+            return;
+        }
+        /** Legacy rename path only when old `balance` column exists. */
+        if (! Schema::hasColumn('seller_wallets', 'balance')) {
+            return;
+        }
+
+        if (Schema::hasColumn('seller_wallets', 'total_earning')) {
+            Schema::table('seller_wallets', function (Blueprint $table) {
+                $table->dropColumn('total_earning');
+            });
+        }
+
+        Schema::table('seller_wallets', function (Blueprint $table) {
+            $table->renameColumn('balance', 'total_earning');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::table('seller_wallets', function (Blueprint $table) {
+            //
+        });
+    }
+}

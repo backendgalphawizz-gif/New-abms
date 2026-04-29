@@ -1,0 +1,475 @@
+@extends('theme-views.layouts.app')
+
+@section('title', translate('My_Order_List').' | '.$web_config['name']->value.' '.translate(' Ecommerce'))
+
+@section('content')
+    <!-- Main Content -->
+    <section class="py-3">
+        <div class="container">
+          
+            <div class="row g-3">
+            <div class="col-md-12">
+            <div class="bread__crum">
+                    <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb fs-12 mb-0">
+                                    <li class="breadcrumb-item"><a href="{{route('home')}}">{{ translate('home') }}</a></li>
+                                    <li class="breadcrumb-item active" aria-current="page">{{translate('Account')}}</li>
+                                </ol>
+                        </nav>
+              </div>
+            </div>
+                <!-- Sidebar-->
+                
+  
+                @include('theme-views.partials._profile-aside')
+
+
+                <div class="card col-lg-9 col-md-12 profilecard py-3">
+                    <div class="filter-section in-order">
+                        <div class="listing-filter w-100">
+                            <!-- <h5 class="filter-heading">Order Status</h5> -->
+                            <ul>
+                                <li>
+                                    <label for=""><input type="checkbox" name="order_status[]" class="check-order-status form-check-input me-2" value="pending"><span>Pending</span></label>
+                                </li>
+                                <li>
+                                    <label for=""><input type="checkbox" name="order_status[]" class="check-order-status form-check-input me-2" value="processing"><span>On the way</span></label>
+                                </li>
+                                <li>
+                                    <label for=""><input type="checkbox" name="order_status[]" class="check-order-status form-check-input me-2" value="delivered"><span>Delivered</span></label>
+                                </li>
+                                <li>
+                                    <label for=""><input type="checkbox" name="order_status[]" class="check-order-status form-check-input me-2" value="canceled"><span>Cancelled</span></label>
+                                </li>
+                                <li>
+                                    <label for=""><input type="checkbox" name="order_status[]" class="check-order-status form-check-input me-2" value="returned"><span>Returned</span></label>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="row orders-ajax-data">
+                        @if($orders->isNotEmpty())
+                            @foreach($orders as $key=>$order)
+                                <div class="col-lg-12">
+                                    <div class="card mt-3">
+                                    <div class="row " >
+                                        <div class="col-lg-2 col-md-3">
+                                            <div class="order-img-listing">
+                                            @php($thumb=$order->details[0]->product->thumbnail ?? '')
+                                            @if($order->seller_is == 'seller')
+                                                <img onerror="this.src='{{ theme_asset('assets/img/image-place-holder.png') }}'"
+                                                    src="{{ asset('storage/app/public/product/thumbnail/' . $thumb)}}" class="img-fit dark-support rounded" alt="">
+                                            @elseif($order->seller_is == 'admin')
+                                                <img  src="{{asset("storage/app/public/company")}}/{{$web_config['fav_icon']->value}}" onerror="this.src='{{ theme_asset('assets/img/image-place-holder.png') }}'" class="img-fit dark-support rounded" alt="">
+                                            @endif
+                                            </div>
+                                        
+                                        </div>
+                                        <div class="col-lg-10 col-md-9 ">
+                                            <div class="order-list-right">
+                                                <div class="order-list-right-top">
+                                                    <h2 class="mb-0">{{ $order->details[0]->product->name ?? "" }}</h2>
+                                                    <div class="order-list-right-top-right">
+                                                        <h1 class="mb-0">{{\App\CPU\Helpers::currency_converter($order['order_amount'])}}</h1>
+                                                        <!-- <svg xmlns="http://www.w3.org/2000/svg" width="20" height="21" viewBox="0 0 20 21" fill="none">
+                                                            <path d="M9.99027 1.91262e-06C15.5073 -0.00338118 19.9983 4.48175 20 9.99873C20.0017 15.5436 15.5292 20.0381 10.0097 20.0398C4.48344 20.0406 -0.000845654 15.5521 1.1962e-07 10.0182C1.1962e-07 4.49275 4.47668 0.00423078 9.99027 1.91262e-06Z" fill="#FDD92C"></path>
+                                                            <path d="M9.99887 2.28516C14.3098 2.33759 17.7098 5.72322 17.7072 10.024C17.7047 14.3205 14.3022 17.7594 9.96842 17.7417C5.71757 17.7247 2.27612 14.345 2.29303 9.98254C2.30995 5.70293 5.69811 2.34521 9.99887 2.28516Z" fill="#FBA917"></path>
+                                                            <path d="M10.0252 4.12646C10.3601 4.81323 10.6857 5.48224 11.013 6.15125C11.238 6.6105 11.4689 7.06806 11.693 7.52817C11.7336 7.61105 11.7928 7.6415 11.8799 7.65419C12.3603 7.72269 12.8407 7.79543 13.3211 7.86647C14.0874 7.98065 14.8537 8.09483 15.6453 8.21324C15.5548 8.3714 15.439 8.47036 15.3273 8.56508C14.8461 8.9719 14.4308 9.44553 13.9766 9.88026C13.6967 10.1475 13.4303 10.4309 13.1317 10.6744C12.8754 10.8833 12.8391 11.1126 12.8966 11.4204C13.1114 12.5614 13.3042 13.7057 13.5081 14.8686C13.3372 14.8424 13.2239 14.7375 13.0928 14.669C12.4593 14.3358 11.8267 14.0034 11.1932 13.671C10.8701 13.5019 10.5402 13.3437 10.2256 13.1593C10.0573 13.0612 9.92621 13.079 9.76467 13.1661C8.82079 13.6752 7.87183 14.1759 6.92372 14.6775C6.79093 14.7477 6.65391 14.8111 6.49237 14.8906C6.63446 14.0643 6.77063 13.2718 6.90765 12.4793C6.98546 12.0285 7.06665 11.5786 7.14615 11.1278C7.16561 11.017 7.1267 10.9316 7.04297 10.8563C6.21411 10.1171 5.4766 9.28145 4.64689 8.54309C4.54878 8.45598 4.45237 8.36717 4.31958 8.24707C4.63336 8.14473 4.91247 8.1312 5.18396 8.08891C6.05088 7.95444 6.9161 7.80304 7.7881 7.71762C8.18138 7.67871 8.34208 7.48334 8.49178 7.16617C8.9375 6.22145 9.40775 5.28771 9.86955 4.35059C9.90338 4.2804 9.92198 4.1992 10.0252 4.12646Z" fill="#FDD92C"></path>
+                                                        </svg> -->
+                                                    </div>
+                                                </div>
+                                                <div class="order-list-right-second">
+                                                <div class="order-list-right-second-left">
+
+                                                    <div>
+                                                        <p>Order ID- {{ $order['id'] }}</p>
+                                                        @if($order['order_status']=='failed' || $order['order_status']=='canceled')
+                                                            <span class="text-center badge bg-danger rounded-pill">
+                                                                {{translate($order['order_status'] =='failed' ? 'Failed To Deliver' : $order['order_status'])}}
+                                                            </span>
+                                                        @elseif($order['order_status']=='confirmed' || $order['order_status']=='processing' || $order['order_status']=='delivered')
+                                                            <span class="text-center badge bg-success rounded-pill">
+                                                                {{translate($order['order_status']=='processing' ? 'packaging' : $order['order_status'])}}
+                                                            </span>
+                                                        @else
+                                                            <span class="text-center badge bg-info rounded-pill">
+                                                                {{translate($order['order_status'])}}
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                        <div class="">
+                                                            <a href="{{ route('account-order-details', ['id'=>$order->id]) }}" class="btn btn-sm btn-outline-info btn-action">
+                                                            <i class="fa-solid fa-eye"></i>
+                                                            </a>
+                                                            @if($order['order_status']=='delivered')
+                                                                <a href="{{route('generate-invoice',[$order->id])}}" class="btn btn-sm btn-outline-success btn-action">
+                                                                    <img src="{{theme_asset('assets/img/svg/download.svg')}}" alt="" class="svg">
+                                                                </a>
+                                                            @endif
+                                                            @if($order['payment_method']=='cash_on_delivery' && $order['order_status']=='pending')
+                                                                <a href="javascript:" title="{{translate('Cancel')}}"
+                                                                    onclick="route_alert('{{ route('order-cancel',[$order->id]) }}','{{translate('want_to_cancel_this_order?')}}')"
+                                                                    class="btn btn-sm btn-danger btn-action d-none">
+                                                                <i class="fa-solid fa-trash"></i>
+                                                                </a>
+                                                            @else
+                                                                <button class="btn btn-sm btn-danger btn-action d-none" title="{{\App\CPU\translate('Cancel')}}" onclick="cancel_message()">
+                                                                <i class="fa-solid fa-trash"></i>
+                                                                </button>
+                                                            @endif
+            
+                                                        </div>
+            
+                                                    </div>
+                                                    <div class="order-list-right-second-right">
+                                                        <small>Expected Deliverey by</small>
+                                                        <p>{{ $order['expected_delivery_date'] != "" ? date('d M, Y', strtotime($order['expected_delivery_date'])) : '-' }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    </div>
+                                    
+                                </div>
+                            @endforeach
+                        @else
+                            <div class="col-lg-12">
+
+                                <div class="empty-content">
+                                    <div>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="211" height="180" viewBox="0 0 211 180" fill="none">
+                                        <path d="M183.985 35.2754H123.765C122.521 35.2754 121.506 36.2835 121.506 37.5346C121.506 38.7787 122.514 39.7939 123.765 39.7939H183.985C185.229 39.7939 186.245 38.7858 186.245 37.5346C186.237 36.2906 185.229 35.2754 183.985 35.2754Z" fill="#E3E1EC"/>
+                                        <path d="M113.713 35.2754H98.5132C97.2691 35.2754 96.2539 36.2835 96.2539 37.5346C96.2539 38.7787 97.262 39.7939 98.5132 39.7939H113.713C114.957 39.7939 115.972 38.7858 115.972 37.5346C115.972 36.2906 114.957 35.2754 113.713 35.2754Z" fill="#E3E1EC"/>
+                                        <path d="M186.38 175.191H126.16C124.916 175.191 123.9 176.199 123.9 177.451C123.9 178.695 124.908 179.71 126.16 179.71H186.38C187.624 179.71 188.639 178.702 188.639 177.451C188.632 176.199 187.624 175.191 186.38 175.191Z" fill="#E3E1EC"/>
+                                        <path d="M116.108 175.191H100.908C99.6636 175.191 98.6484 176.199 98.6484 177.451C98.6484 178.695 99.6565 179.71 100.908 179.71H116.108C117.352 179.71 118.367 178.702 118.367 177.451C118.367 176.199 117.352 175.191 116.108 175.191Z" fill="#E3E1EC"/>
+                                        <path d="M1.60864 161.515H44.4699C45.3564 161.515 46.0786 160.793 46.0786 159.906C46.0786 159.019 45.3564 158.297 44.4699 158.297H1.60864C0.7221 158.297 0 159.019 0 159.906C0 160.8 0.7221 161.515 1.60864 161.515Z" fill="#E3E1EC"/>
+                                        <path d="M51.6262 161.515H62.4434C63.33 161.515 64.0521 160.793 64.0521 159.906C64.0521 159.019 63.33 158.297 62.4434 158.297H51.6262C50.7397 158.297 50.0176 159.019 50.0176 159.906C50.0176 160.8 50.7397 161.515 51.6262 161.515Z" fill="#E3E1EC"/>
+                                        <path d="M148.031 169.693H190.892C191.778 169.693 192.5 168.971 192.5 168.084C192.5 167.198 191.778 166.476 190.892 166.476H148.031C147.144 166.476 146.422 167.198 146.422 168.084C146.422 168.971 147.137 169.693 148.031 169.693Z" fill="#E3E1EC"/>
+                                        <path d="M198.048 169.693H208.865C209.752 169.693 210.474 168.971 210.474 168.085C210.474 167.198 209.752 166.476 208.865 166.476H198.048C197.162 166.476 196.439 167.198 196.439 168.085C196.439 168.971 197.154 169.693 198.048 169.693Z" fill="#E3E1EC"/>
+                                        <path d="M102.352 0H72.2458C71.6238 0 71.1162 0.507616 71.1162 1.12962C71.1162 1.75163 71.6238 2.25925 72.2458 2.25925H102.352C102.974 2.25925 103.482 1.75163 103.482 1.12962C103.482 0.507616 102.982 0 102.352 0Z" fill="#E3E1EC"/>
+                                        <path d="M67.2198 0H59.6198C58.9978 0 58.4902 0.507616 58.4902 1.12962C58.4902 1.75163 58.9978 2.25925 59.6198 2.25925H67.2198C67.8418 2.25925 68.3494 1.75163 68.3494 1.12962C68.3494 0.507616 67.8418 0 67.2198 0Z" fill="#E3E1EC"/>
+                                        <path d="M81.8397 165.354H51.7331C51.1111 165.354 50.6035 165.861 50.6035 166.483C50.6035 167.105 51.1111 167.613 51.7331 167.613H81.8397C82.4617 167.613 82.9693 167.105 82.9693 166.483C82.9693 165.861 82.4617 165.354 81.8397 165.354Z" fill="#E3E1EC"/>
+                                        <path d="M46.7071 165.354H39.1072C38.4851 165.354 37.9775 165.861 37.9775 166.483C37.9775 167.105 38.4851 167.613 39.1072 167.613H46.7071C47.3291 167.613 47.8367 167.105 47.8367 166.483C47.8367 165.861 47.3291 165.354 46.7071 165.354Z" fill="#E3E1EC"/>
+                                        <path d="M150.292 99.3067L150.292 99.3066C148.01 95.3765 145.704 91.4617 143.398 87.5474C142.33 85.7338 141.261 83.9202 140.195 82.1054L140.325 82.0294L140.195 82.1053C139.835 81.491 139.394 81.0472 138.873 80.756C138.353 80.4647 137.744 80.3216 137.042 80.3216C114.382 80.3275 91.7224 80.3275 69.0596 80.3187L150.292 99.3067ZM150.292 99.3067C151.021 100.561 150.992 101.852 150.438 102.829C149.884 103.806 148.794 104.487 147.363 104.503M150.292 99.3067L147.363 104.503M65.835 82.1694L65.8349 82.1695C64.5335 84.3905 63.228 86.609 61.9225 88.8275C59.8741 92.3083 57.8257 95.7892 55.793 99.2804C55.0617 100.537 55.0825 101.834 55.6274 102.816C56.1722 103.799 57.2504 104.484 58.6727 104.5C58.9195 104.502 59.1663 104.505 59.4129 104.508C61.0589 104.528 62.7012 104.548 64.337 104.479C64.7826 104.46 65.1045 104.524 65.2984 104.756C65.3931 104.87 65.4456 105.011 65.4751 105.168C65.5045 105.325 65.5128 105.508 65.5121 105.714C65.5121 105.714 65.5121 105.714 65.5121 105.714L65.835 82.1694ZM65.835 82.1694C66.2062 81.5351 66.6536 81.0746 67.1833 80.7718M65.835 82.1694L67.1833 80.7718M83.3565 97.8215C83.6871 97.8231 83.9229 97.732 84.1084 97.5733C84.2856 97.4216 84.4077 97.2146 84.5254 97.0143L84.5255 97.0141C85.0784 96.0708 85.6322 95.1277 86.1861 94.1844C87.3865 92.1402 88.5873 90.0953 89.7799 88.0465C89.8051 88.0034 89.838 87.9605 89.879 87.9069L89.8882 87.8948C89.931 87.839 89.981 87.7726 90.0213 87.6982C90.1076 87.5388 90.1469 87.3449 90.0427 87.1049L90.0036 87.0146H89.9051C88.6615 87.0146 87.4174 87.0147 86.1728 87.0148C81.1907 87.0153 76.2018 87.0157 71.2147 87.0087H71.2145C71.0142 87.0087 70.8421 87.0431 70.691 87.1326C70.5405 87.2216 70.4258 87.3564 70.324 87.5296L70.3237 87.53C68.7749 90.1836 67.2149 92.8315 65.5988 95.5747C65.2084 96.2374 64.8148 96.9056 64.4172 97.5807L64.284 97.8069H64.5464C66.0653 97.8069 67.572 97.8062 69.0692 97.8056C73.8972 97.8035 78.6277 97.8014 83.3565 97.8215ZM83.3565 97.8215L83.3573 97.6715M83.3565 97.8215C83.3566 97.8215 83.3566 97.8215 83.3566 97.8215L83.3573 97.6715M83.3573 97.6715C78.6279 97.6514 73.8969 97.6535 69.0688 97.6556C67.6289 97.6562 66.1803 97.6568 64.7205 97.6569L89.7585 87.8175C89.7191 87.8689 89.6806 87.9191 89.6504 87.9708C88.4579 90.0194 87.2574 92.0639 86.057 94.108C85.5031 95.0514 84.9492 95.9947 84.3961 96.9383C84.1557 97.3472 83.9554 97.6744 83.3573 97.6715ZM85.2919 104.67C82.8061 104.635 80.3193 104.639 77.8321 104.643C76.2188 104.646 74.6052 104.649 72.9917 104.641M85.2919 104.67L92.0343 129.137L92.0335 129.287C92.1626 129.287 92.2834 129.284 92.3903 129.265C92.4981 129.247 92.6014 129.212 92.6885 129.143C92.868 129.002 92.9241 128.763 92.9227 128.441M85.2919 104.67C87.0977 104.697 88.3225 103.969 89.1983 102.374L85.2919 104.67ZM72.9917 104.641L72.9925 104.491M72.9917 104.641C72.4422 104.638 72.1818 104.694 72.1847 105.377M72.9917 104.641L72.9925 104.491L72.1847 105.377M72.9925 104.491C74.6037 104.499 76.2165 104.496 77.8296 104.493C80.3181 104.489 82.8076 104.485 85.294 104.52H85.294C86.1758 104.533 86.905 104.362 87.5177 104.001C88.1306 103.64 88.6386 103.082 89.0667 102.302C89.8159 100.936 90.6177 99.5992 91.4178 98.2649C91.7623 97.6903 92.1065 97.1163 92.446 96.5408L92.5108 96.431L92.6296 96.4772C92.6898 96.5006 92.7489 96.5236 92.8106 96.5465L92.9084 96.5828V96.6871C92.9084 98.6124 92.9082 100.538 92.908 102.463C92.9071 111.123 92.9063 119.783 92.9227 128.441M72.9925 104.491C72.8544 104.49 72.725 104.493 72.6108 104.51C72.496 104.528 72.3854 104.562 72.2917 104.631C72.0967 104.776 72.0332 105.028 72.0347 105.378M72.9925 104.491L72.2113 129.086C72.0658 128.924 72.039 128.685 72.0404 128.409C72.0576 120.733 72.0604 113.054 72.0347 105.378M92.9227 128.441L92.7727 128.442L92.9227 128.441C92.9227 128.441 92.9227 128.441 92.9227 128.441ZM72.1847 105.377L72.0347 105.378C72.0347 105.378 72.0347 105.378 72.0347 105.378M72.1847 105.377L72.0347 105.378M99.4396 128.391C99.4381 128.816 99.5394 129.08 99.7806 129.203C99.8901 129.259 100.013 129.277 100.13 129.283C100.209 129.287 100.297 129.286 100.383 129.285C100.422 129.284 100.46 129.284 100.497 129.284H100.497C101.217 129.283 101.937 129.283 102.657 129.283C112.743 129.277 122.829 129.271 132.915 129.301C133.321 129.303 133.628 129.254 133.819 129.048C134.007 128.846 134.043 128.533 134.041 128.137C134.01 120.674 134.007 113.214 134.047 105.755V105.754C134.049 105.312 134.008 104.971 133.803 104.753C133.595 104.531 133.26 104.478 132.809 104.479L132.809 104.479C128.926 104.498 125.04 104.498 121.154 104.498C116.515 104.497 111.875 104.497 107.238 104.529C106.288 104.535 105.507 104.357 104.855 103.976C104.202 103.596 103.665 103.006 103.213 102.169C102.502 100.853 101.731 99.5667 100.932 98.2343C100.568 97.6264 100.198 97.0089 99.8248 96.3745L99.6163 96.0199L99.5476 96.4254C99.5272 96.5456 99.5101 96.6316 99.4966 96.6996C99.4934 96.7162 99.4903 96.7317 99.4874 96.7464C99.4732 96.8192 99.4625 96.8797 99.4625 96.9441C99.4618 99.5645 99.4619 102.185 99.4621 104.805C99.4626 112.667 99.4632 120.528 99.4396 128.391ZM99.4396 128.391L99.5896 128.392M99.4396 128.391C99.4396 128.391 99.4396 128.391 99.4396 128.391L99.5896 128.392M99.5896 128.392C99.5869 129.144 99.9209 129.14 100.375 129.135C100.415 129.134 100.456 129.134 100.497 129.134L99.6436 96.7295C99.6237 96.8302 99.6125 96.8866 99.6125 96.9441C99.6118 99.5643 99.6119 102.184 99.6121 104.804C99.6126 112.667 99.6132 120.529 99.5896 128.392ZM67.1833 80.7718C67.713 80.4689 68.3338 80.3187 69.0595 80.3187L67.1833 80.7718ZM147.363 104.503C147.121 104.505 146.879 104.507 146.636 104.51M147.363 104.503L146.636 104.51M146.636 104.51C144.986 104.527 143.339 104.544 141.695 104.485L146.636 104.51ZM109.411 97.8215H109.412C117.844 97.8047 126.275 97.8056 134.707 97.8065C136.58 97.8067 138.452 97.8069 140.325 97.8069H140.327H140.329H140.331H140.333H140.335H140.337H140.339H140.341H140.343H140.345H140.347H140.349H140.351H140.353H140.355H140.357H140.359H140.361H140.363H140.365H140.367H140.369H140.371H140.373H140.375H140.377H140.379H140.381H140.383H140.385H140.387H140.389H140.391H140.393H140.395H140.397H140.399H140.401H140.403H140.405H140.407H140.409H140.411H140.413H140.415H140.417H140.419H140.421H140.423H140.425H140.427H140.429H140.431H140.433H140.435H140.437H140.439H140.441H140.443H140.445H140.447H140.449H140.451H140.453H140.455H140.457H140.459H140.461H140.463H140.465H140.467H140.469H140.471H140.473H140.475H140.477H140.479H140.481H140.483H140.485H140.487H140.489H140.491H140.493H140.495H140.497H140.499H140.501H140.503H140.505H140.507H140.509H140.511H140.513H140.515H140.517H140.519H140.521H140.523H140.525H140.527H140.53H140.532H140.534H140.536H140.538H140.54H140.542H140.544H140.546H140.548H140.55H140.552H140.554H140.556H140.558H140.56H140.562H140.564H140.566H140.568H140.57H140.572H140.574H140.576H140.579H140.581H140.583H140.585H140.587H140.589H140.591H140.593H140.595H140.597H140.599H140.601H140.603H140.605H140.607H140.609H140.612H140.614H140.616H140.618H140.62H140.622H140.624H140.626H140.628H140.63H140.632H140.634H140.636H140.639H140.641H140.643H140.645H140.647H140.649H140.651H140.653H140.655H140.657H140.659H140.662H140.664H140.666H140.668H140.67H140.672H140.674H140.676H140.678H140.68H140.683H140.685H140.687H140.689H140.691H140.693H140.695H140.697H140.7H140.702H140.704H140.706H140.708H140.71H140.712H140.714H140.717H140.719H140.721H140.723H140.725H140.727H140.729H140.732H140.734H140.736H140.738H140.74H140.742H140.744H140.747H140.749H140.751H140.753H140.755H140.757H140.76H140.762H140.764H140.766H140.768H140.77H140.773H140.775H140.777H140.779H140.781H140.784H140.786H140.788H140.79H140.792H140.795H140.797H140.799H140.801H140.803H140.806H140.808H140.81H140.812H140.814H140.817H140.819H140.821H140.823H140.825H140.828H140.83H140.832H140.834H140.837H140.839H140.841H140.843H140.846H140.848H140.85H140.852H140.855H140.857H140.859H140.861H140.864H140.866H140.868H140.87H140.873H140.875H140.877H140.879H140.882H140.884H140.886H140.889H140.891H140.893H140.895H140.898H140.9H140.902H140.905H140.907H140.909H140.911H140.914H140.916H140.918H140.921H140.923H140.925H140.928H140.93H140.932H140.935H140.937H140.939H140.942H140.944H140.946H140.949H140.951H140.953H140.956H140.958H140.96H140.963H140.965H140.967H140.97H140.972H140.974H140.977H140.979H140.982H140.984H140.986H140.989H140.991H140.993H140.996H140.998H141.001H141.003H141.005H141.008H141.01H141.013H141.015H141.017H141.02H141.022H141.025H141.027H141.03H141.032H141.034H141.037H141.039H141.042H141.044H141.047H141.049H141.052H141.054H141.056H141.059H141.061H141.064H141.066H141.069H141.071H141.074H141.076H141.079H141.081H141.084H141.086H141.089H141.091H141.094H141.096H141.099H141.101H141.104H141.106H141.109H141.111H141.114H141.116H141.119H141.121H141.124H141.126H141.129H141.131H141.134H141.137H141.139H141.142H141.144H141.147H141.149H141.152H141.154H141.157H141.16H141.162H141.165H141.167H141.17H141.173H141.175H141.178H141.18H141.183H141.186H141.188H141.191H141.193H141.196H141.199H141.201H141.204H141.206H141.209H141.212H141.214H141.217H141.22H141.222H141.225H141.228H141.23H141.233H141.236H141.238H141.241H141.244H141.246H141.249H141.252H141.254H141.257H141.26H141.263H141.265H141.268H141.271H141.273H141.276H141.279H141.282H141.284H141.287H141.29H141.293H141.295H141.298H141.301H141.304H141.306H141.309H141.312H141.315H141.317H141.32H141.323H141.326H141.328H141.331H141.334H141.337H141.34H141.342H141.345H141.348H141.351H141.354H141.357H141.359H141.362H141.365H141.368H141.371H141.374H141.376H141.379H141.382H141.385H141.388H141.391H141.394H141.396H141.399H141.402H141.405H141.408H141.411H141.414H141.417H141.42H141.423H141.425H141.428H141.431H141.434H141.437H141.44H141.443H141.446H141.449H141.452H141.455H141.458H141.461H141.464H141.467H141.47H141.473H141.476H141.479H141.482H141.485H141.488H141.491H141.494H141.497H141.5H141.503H141.506H141.509H141.512H141.515H141.518H141.521H141.524H141.786L141.653 97.5809C141.227 96.8553 140.804 96.137 140.385 95.4244C138.793 92.7169 137.249 90.0908 135.715 87.4574C135.598 87.255 135.454 87.137 135.283 87.0747C135.121 87.0156 134.946 87.0116 134.781 87.0116C124.012 87.0145 113.246 87.0146 102.26 87.0146H102.003L102.129 87.2382C102.171 87.3122 102.21 87.3815 102.247 87.4471C102.422 87.7587 102.549 87.984 102.68 88.2072L102.68 88.2074C103.15 89.0083 103.622 89.8076 104.095 90.6067C105.33 92.6974 106.565 94.7868 107.761 96.9011L107.892 96.8273L107.761 96.9012C107.962 97.2564 108.183 97.4929 108.46 97.6366C108.735 97.7792 109.047 97.8215 109.411 97.8215Z" fill="#0A9494" stroke="white" stroke-width="0.3"/>
+                                        </svg>
+                                    <h3>{{translate('Your_Order_is_empty')}}</h3>
+                                    <a href="{{ route('products',['page'=>1]) }}" class="btn-login for-empty">{{translate('Shop_Now')}}</a>
+                                </div>
+                            </div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="col-lg-9 d-none">
+                    <div class="card h-100">
+                        <div class="card-body p-lg-4">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                <h5>{{translate('My_Order_List')}}</h5>
+                                <div class="border rounded  custom-ps-3 py-2">
+                                    <div class="d-flex gap-2">
+                                        <div class="flex-middle gap-2">
+                                            <i class="bi bi-sort-up-alt"></i>
+                                            <span class="d-none d-sm-inline-block">{{translate('Show_Order:')}}</span>
+                                        </div>
+                                        <div class="dropdown">
+                                            <button type="button" class="border-0 bg-transparent dropdown-toggle text-dark p-0 custom-pe-3" data-bs-toggle="dropdown" aria-expanded="false">
+                                                {{$order_by=='asc'?'Old':'Latest'}}
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+
+                                                <li >
+                                                    <a class="d-flex" href="{{route('account-oder')}}/?order_by=desc">
+                                                        {{translate('Latest')}}
+                                                    </a>
+                                                </li>
+                                                <li >
+                                                    <a class="d-flex" href="{{route('account-oder')}}/?order_by=asc">
+                                                        {{translate('Old')}}
+                                                    </a>
+                                                </li>
+
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <div class="table-responsive d-none d-sm-block">
+                                    <table class="table align-middle table-striped">
+                                        <thead class="text-primary">
+                                        <tr>
+                                            <th>{{translate('SL')}}</th>
+                                            <th>{{translate('Order_Details')}}</th>
+                                            <th class="text-center">{{translate('Status')}}</th>
+                                            <th>{{translate('Amount')}}</th>
+                                            <th class="text-center">{{translate('Action')}}</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        @foreach($orders as $key=>$order)
+                                        <tr>
+                                            <td>{{ $orders->firstItem() + $key }}</td>
+                                            <td>
+                                                <div class="media gap-3 align-items-center mn-w200">
+                                                    <div class="avatar rounded" style="--size: 3.75rem">
+                                                        @if($order->seller_is == 'seller')
+                                                            @php($img=$order->seller->shop->image ?? '')
+                                                        <img onerror="this.src='{{ theme_asset('assets/img/image-place-holder.png') }}'"
+                                                            src="{{ asset('storage/app/public/shop/'.$img)}}" class="img-fit dark-support rounded" alt="">
+                                                        @elseif($order->seller_is == 'admin')
+                                                            <img  src="{{asset("storage/app/public/company")}}/{{$web_config['fav_icon']->value}}"
+                                                                  onerror="this.src='{{ theme_asset('assets/img/image-place-holder.png') }}'" class="img-fit dark-support rounded" alt="">
+                                                        @endif
+                                                    </div>
+                                                    <div class="media-body">
+                                                        <h6>
+                                                            <a href="{{ route('account-order-details', ['id'=>$order->id]) }}">{{translate('Order#')}}{{$order['id']}}</a>
+                                                        </h6>
+                                                        <div class="text-dark fs-12">{{count($order->details)}} {{translate('items')}}</div>
+                                                        <p class="text-muted fs-12">{{date('d M, Y h:i A',strtotime($order['created_at']))}}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                @if($order['order_status']=='failed' || $order['order_status']=='canceled')
+                                                    <span class="text-center badge bg-danger rounded-pill">
+                                                        {{translate($order['order_status'] =='failed' ? 'Failed To Deliver' : $order['order_status'])}}
+                                                    </span>
+                                                @elseif($order['order_status']=='confirmed' || $order['order_status']=='processing' || $order['order_status']=='delivered')
+                                                    <span class="text-center badge bg-success rounded-pill">
+                                                        {{translate($order['order_status']=='processing' ? 'packaging' : $order['order_status'])}}
+                                                    </span>
+                                                @else
+                                                    <span class="text-center badge bg-info rounded-pill">
+                                                        {{translate($order['order_status'])}}
+                                                    </span>
+                                                @endif
+
+                                                <div class="{{ $order['payment_status']=='unpaid' ? 'text-danger':'text-dark' }} mt-1"> {{ translate($order['payment_status']) }}</div>
+                                            </td>
+                                            <td>{{\App\CPU\Helpers::currency_converter($order['order_amount'])}}</td>
+                                            <td>
+                                                <div class="d-flex justify-content-center gap-2 align-items-center">
+                                                    <a href="{{ route('account-order-details', ['id'=>$order->id]) }}" class="btn btn-outline-info btn-action">
+                                                    <i class="fa-solid fa-eye"></i>
+                                                    </a>
+
+                                                    <a href="{{route('generate-invoice',[$order->id])}}" class="btn btn-outline-success btn-action">
+                                                        <img src="{{theme_asset('assets/img/svg/download.svg')}}" alt="" class="svg">
+                                                    </a>
+                                                    @if($order['payment_method']=='cash_on_delivery' && $order['order_status']=='pending')
+                                                        <a href="javascript:" title="{{translate('Cancel')}}"
+                                                           onclick="route_alert('{{ route('order-cancel',[$order->id]) }}','{{translate('want_to_cancel_this_order?')}}')"
+                                                           class="btn btn-danger btn-action">
+                                                           <i class="fa-solid fa-trash"></i>
+                                                        </a>
+                                                    @else
+                                                        <button class="btn btn-danger btn-action" title="{{\App\CPU\translate('Cancel')}}" onclick="cancel_message()">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                        </button>
+                                                    @endif
+
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                        </tbody>
+                                    </table>
+                                    @if($orders->count()==0)
+                                        <div class="mb-2 mt-5 text-center">{{ translate('order_not_found') }} !</div>
+                                    @endif
+
+                                    @if($orders->count()>0)
+                                        <div class="card-footer border-0">
+                                            {{$orders->links() }}
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <div class="d-flex flex-column">
+                                    @foreach($orders as $key=>$order)
+                                    <div class="d-flex gap-2 justify-content-between py-2 border-bottom d-sm-none">
+                                        <div class="media gap-2 mn-w200" onclick="location.href='{{ route('account-order-details', ['id'=>$order->id]) }}'">
+                                            <div class="avatar rounded" style="--size: 3.75rem">
+                                                @if($order->seller_is == 'seller')
+                                                @php($img=$order->seller->shop->image ??'')
+                                                <img onerror="this.src='{{ theme_asset('assets/img/image-place-holder.png') }}'"
+                                                    src="{{ asset('storage/app/public/shop/'.$img)}}" class="img-fit dark-support rounded" alt="">
+                                                @elseif($order->seller_is == 'admin')
+                                                    <img  src="{{asset("storage/app/public/company")}}/{{$web_config['fav_icon']->value}}"
+                                                            onerror="this.src='{{ theme_asset('assets/img/image-place-holder.png') }}'" class="img-fit dark-support rounded" alt="">
+                                                @endif
+                                            </div>
+                                            <div class="media-body">
+                                                <h6>{{translate('Order#')}}{{$order['id']}}</h6>
+                                                <div class="text-dark fs-12">{{count($order->details)}} {{translate('items')}}</div>
+                                                <div class="text-muted fs-12">{{date('d M, Y h:i A',strtotime($order['created_at']))}}</div>
+                                                <div class="d-flex gap-2 align-items-center fs-12">
+                                                    <div class="text-muted">{{ translate('price') }} : </div>
+                                                    <div class="text-dark"> {{\App\CPU\Helpers::currency_converter($order['order_amount'])}}</div>
+                                                </div>
+                                                <div class="d-flex gap-2 align-items-center fs-12">
+                                                    <div class="text-muted">{{ translate('status') }} : </div>
+                                                    @if($order['order_status']=='failed' || $order['order_status']=='canceled')
+                                                        <span class="text-center badge bg-danger rounded-pill">
+                                                        {{translate($order['order_status'] =='failed' ? 'Failed To Deliver' : $order['order_status'])}}
+                                                    </span>
+                                                    @elseif($order['order_status']=='confirmed' || $order['order_status']=='processing' || $order['order_status']=='delivered')
+                                                        <span class="text-center badge bg-success rounded-pill">
+                                                        {{translate($order['order_status']=='processing' ? 'packaging' : $order['order_status'])}}
+                                                    </span>
+                                                    @else
+                                                        <span class="text-center badge bg-info rounded-pill">
+                                                        {{translate($order['order_status'])}}
+                                                    </span>
+                                                    @endif
+
+                                                    <div class="{{ $order['payment_status']=='unpaid' ? 'text-danger':'text-dark' }}"> {{ translate($order['payment_status']) }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="">
+                                            @if($order['order_status']=='delivered')
+                                                <a href="{{route('generate-invoice',[$order->id])}}" class="btn btn-outline-success btn-action mb-1">
+                                                    <img src="{{theme_asset('assets/img/svg/download.svg')}}" alt="" class="svg">
+                                                </a>
+                                            @endif
+                                            @if($order['payment_method']=='cash_on_delivery' && $order['order_status']=='pending')
+                                                <a href="javascript:" title="{{translate('Cancel')}}"
+                                                   onclick="route_alert('{{ route('order-cancel',[$order->id]) }}','{{translate('want_to_cancel_this_order?')}}')"
+                                                   class="btn btn-danger btn-action mb-1">
+                                                    <i class="bi bi-trash"></i>
+                                                </a>
+                                            @else
+                                                <button class="btn btn-danger btn-action mb-1" title="{{\App\CPU\translate('Cancel')}}" onclick="cancel_message()">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+</section>
+
+
+
+
+
+    
+
+    <!-- CHANGE PASSWORD MODAL START -->
+    <div class="">
+
+        <!-- Modal -->
+        <div class="modal fade" id="changepass" tabindex="-1" aria-labelledby="exampleModalLabelchangepass" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body">
+                        <div class="change-pass p-4">
+                            <div class="">
+                                <div class="">
+                                    <h2 class="auth-heading text-center">Change Password</h2>
+                                    <p class="text-muted text-center">Lorem Ipsum is simply dummy text of the
+                                        printing and
+                                        typesetting industry.
+                                    </p>
+                                    <form>
+                                        <div class="login-form mb-4">
+                                            <span class="position-relative">
+                                                <input class="balloon form-control" type="password" placeholder="Full Name " autocomplete="off">
+                                                <label>Current Password</label>
+                                            </span>
+                                        </div>
+                                        <div class="login-form mb-4">
+                                            <span class="position-relative">
+                                                <input class="balloon form-control" type="password" placeholder="Email..." autocomplete="off"><label>New
+                                                    Password</label>
+                                            </span>
+                                        </div>
+                                        <div class="login-form mb-4">
+                                            <span class="position-relative">
+                                                <input class="balloon form-control" type="password" placeholder="Create Password..." autocomplete="off"><label>Create
+                                                    Password</label>
+                                                <i class="toggle-password fa fa-fw fa-eye-slash"></i>
+                                            </span>
+                                        </div>
+
+
+
+                                        <div class="login-button">
+                                            <a class="btn-login" id="Createaccount">Change Password </a>
+                                        </div>
+                                    </form>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHANGE PASSWORD MODAL END -->
+</section>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <!-- End Main Content -->
+@endsection
+@push('script')
+
+    <script>
+        function cancel_message() {
+            toastr.info('{{translate('order_can_be_canceled_only_when_pending.')}}', {
+                CloseButton: true,
+                ProgressBar: true
+            });
+        }
+
+        $(document).on('change', '.check-order-status', function() {
+            var status = []
+            $('input.check-order-status:checked').each(function(ind, elm) {
+                status.push($(elm).val())
+            })
+
+            $.ajax({
+                type: "POST",
+                url: "{{ route('fetch-customer-orders') }}",
+                data: {
+                    'status':status,
+                    '_token': $('meta[name=_token]').attr('content')
+                },
+                dataType: "json",
+                success: function (response) {
+                    $('.orders-ajax-data').html(response.view)
+                }
+            });
+        })
+
+    </script>
+
+
+@endpush

@@ -1,0 +1,19 @@
+@extends('theme-views.layouts.app')
+
+@section('title', translate('cart_list').' | '.$web_config['name']->value.' '.translate(' Ecommerce'))
+
+@section('content')
+    <!-- Main Content -->
+    <main class="main-content d-flex flex-column gap-3 pt-3" id="cart-summary">
+        @include(VIEW_FILE_NAMES['products_buy_details_partials'])
+    </main>
+
+
+    <!-- End Main Content -->
+@endsection
+
+@push('script')
+    <script>
+        cartQuantityInitialize();
+    </script>
+@endpush
