@@ -1,0 +1,36 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class AddPosStatusToSellersTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        if (! Schema::hasTable('sellers') || Schema::hasColumn('sellers', 'pos_status')) {
+            return;
+        }
+
+        Schema::table('sellers', function (Blueprint $table) {
+            $table->boolean('pos_status')->default(0);
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::table('sellers', function (Blueprint $table) {
+            $table->dropColumn('pos_status');
+        });
+    }
+}

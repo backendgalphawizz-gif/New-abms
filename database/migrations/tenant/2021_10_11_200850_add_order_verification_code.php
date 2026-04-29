@@ -1,0 +1,36 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class AddOrderVerificationCode extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        if (! Schema::hasTable('orders') || Schema::hasColumn('orders', 'verification_code')) {
+            return;
+        }
+
+        Schema::table('orders', function (Blueprint $table) {
+            $table->string('verification_code')->default(000000);
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::table('orders', function (Blueprint $table) {
+            //
+        });
+    }
+}
