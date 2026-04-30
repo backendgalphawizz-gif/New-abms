@@ -97,6 +97,7 @@ Route::group(['namespace' => 'api\v1', 'prefix' => 'v1', 'middleware' => ['api_l
 
     Route::group(['prefix'=>'assessor','middleware' => 'assessor_api_auth'], function() {
         Route::get('get-profile','AssessorController@getProfile');
+        Route::get('iso-standards','AssessorController@isoStandards');
         Route::get('get-chat','AssessorController@getChat');
         Route::post('send-message','AssessorController@sendMessage');
         Route::delete('delete-chat/{id}','AssessorController@deleteChat');

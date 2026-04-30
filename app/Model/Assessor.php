@@ -9,6 +9,21 @@ use Illuminate\Support\Facades\App;
 
 class Assessor extends Model
 {
+    protected $fillable = [
+        'assessor_id',
+        'apply_designation',
+        'highest_qualification',
+        'technical_area',
+        'experience',
+        'home_address',
+        'residence_tel',
+        'training',
+        'specific_knowledge_gained',
+        'additional_information',
+        'professional_experience',
+        'assessment_summery',
+    ];
+
     protected $casts = [
         'professional_experience' => 'json',
         'assessment_summery' => 'json',

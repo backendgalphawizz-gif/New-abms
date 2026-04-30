@@ -61,6 +61,7 @@ Route::group(['namespace' => 'SuperAdmin', 'prefix' => 'super-admin', 'as' => 's
         });
 
         Route::resource('entities', 'EntityController')->only(['index', 'create', 'store', 'destroy']);
+        Route::resource('iso-standards', 'IsoStandardController')->except(['show']);
         Route::get('auditors', 'AuditorController@index')->name('auditors.index');
         Route::get('auditors/create', 'AuditorController@create')->name('auditors.create');
         Route::post('auditors', 'AuditorController@store')->name('auditors.store');
