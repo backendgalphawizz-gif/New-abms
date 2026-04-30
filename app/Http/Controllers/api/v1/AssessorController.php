@@ -273,6 +273,7 @@ class AssessorController extends Controller
             return response()->json($response, 403);
         }
 
+        
 
         if ($request->has('image')) {
             $imageName = ImageManager::update('admin/', $assessor->image, 'png', $request->file('image'));
