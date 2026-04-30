@@ -4,6 +4,8 @@ namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Entity;
+use App\Models\IsoStandard;
+use App\Support\IsoChecklistTemplates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -38,15 +40,38 @@ class EntityController extends Controller
 
     public function create()
     {
+        $standardRows = IsoStandard::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('code')
+            ->get(['code', 'name']);
+
+        $isoStandards = $standardRows->pluck('name', 'code')->toArray();
+        $isoChecklistTemplates = [];
+        foreach ($standardRows as $standardRow) {
+            $template = IsoChecklistTemplates::forCode((string) $standardRow->code);
+            if ($template === null) {
+                continue;
+            }
+
+            $isoChecklistTemplates[(string) $standardRow->code] = $template;
+        }
+
         return view('super-admin.entities.create', [
             'domainSuffix' => config('tenancy.entity_domain_suffix'),
-            'isoStandards' => self::isoStandards(),
+            'isoStandards' => $isoStandards,
+            'isoChecklistTemplates' => $isoChecklistTemplates,
         ]);
     }
 
     public function store(Request $request)
     {
         $suffix = config('tenancy.entity_domain_suffix');
+
+        $validIsoCodes = IsoStandard::query()
+            ->where('is_active', true)
+            ->pluck('code')
+            ->all();
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -68,12 +93,12 @@ class EntityController extends Controller
             'admin_password' => ['required', 'string', 'min:8', 'confirmed'],
             'admin_phone' => ['nullable', 'string', 'max:25'],
             'iso_certifications' => ['nullable', 'array'],
-            'iso_certifications.*' => ['string', Rule::in(array_keys(self::isoStandards()))],
+            'iso_certifications.*' => ['string', Rule::in($validIsoCodes)],
         ]);
 
         $fullDomain = strtolower($request->subdomain).'.'.$suffix;
         $selectedIso = array_values(array_intersect(
-            array_keys(self::isoStandards()),
+            $validIsoCodes,
             (array) $request->input('iso_certifications', [])
         ));
 
@@ -163,26 +188,5 @@ class EntityController extends Controller
 
         return redirect()->route('super-admin.entities.index')
             ->with('success', __('Entity removed and tenant database deleted.'));
-    }
-
-    private static function isoStandards(): array
-    {
-        return [
-            'ISO 9001:2015' => 'Quality Management System',
-            'ISO 14001:2015' => 'Environmental Management',
-            'ISO 45001:2018' => 'Occupational Health & Safety',
-            'ISO 20000-1:2018' => 'IT Service Management',
-            'ISO 22000:2018' => 'Food Safety Management',
-            'ISO 27001:2022' => 'Information Security',
-            'ISO 50001:2018' => 'Energy Management System',
-            'ISO 13485:2016' => 'Medical Devices Quality',
-            'ISO 22301:2019' => 'Business Continuity Management',
-            'ISO 21001:2018' => 'Educational Organizations',
-            'ISO 55001:2024' => 'Asset Management System',
-            'ISO 41001:2018' => 'Facility Management System',
-            'ISO 37001:2016' => 'Anti-Bribery Management',
-            'ISO 42001:2023' => 'Artificial Intelligence Management',
-            'ISO/IEC 27701:2019' => 'Privacy Information Management',
-        ];
     }
 }

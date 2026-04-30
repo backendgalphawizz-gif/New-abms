@@ -55,6 +55,14 @@
                                 <span class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate">Entities</span>
                             </a>
                         </li>
+                        <li class="navbar-vertical-aside-has-menu {{ request()->routeIs('super-admin.iso-standards.*') ? 'active' : '' }}">
+                            <a class="js-navbar-vertical-aside-menu-link nav-link"
+                               title="ISO Standards"
+                               href="{{ route('super-admin.iso-standards.index') }}">
+                                <i class="tio-checkmark-square nav-icon"></i>
+                                <span class="navbar-vertical-aside-mini-mode-hidden-elements text-truncate">ISO Standards</span>
+                            </a>
+                        </li>
                         <li class="{{ $subdomainsNavOpen ? 'active' : '' }}">
                             <div class="nav-link"
                                  title="{{ \App\CPU\translate('Subdomain management') }}">

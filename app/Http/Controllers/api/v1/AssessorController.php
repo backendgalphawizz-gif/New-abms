@@ -5,6 +5,8 @@ namespace App\Http\Controllers\api\v1;
 use App\Http\Controllers\Controller;
 use App\CPU\Helpers;
 use App\CPU\ImageManager;
+use App\Models\IsoStandard;
+use App\Support\IsoChecklistTemplates;
 use App\Model\Training;
 use App\Model\TrainingAttempt;
 use Illuminate\Http\Request;
@@ -82,6 +84,27 @@ class AssessorController extends Controller
             'assessment_summery' => optional($assessorProfile)->assessment_summery,
         ];
         return response()->json($response);
+    }
+
+    public function isoStandards()
+    {
+        $standards = IsoStandard::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('code')
+            ->get(['id', 'code', 'name', 'sort_order'])
+            ->map(function (IsoStandard $standard) {
+                $template = IsoChecklistTemplates::forCode((string) $standard->code);
+                $standard->setAttribute('checklist_template', $template);
+
+                return $standard;
+            });
+
+        return response()->json([
+            'status' => true,
+            'message' => 'success',
+            'data' => $standards,
+        ]);
     }
 
     public function getChat(Request $request) {

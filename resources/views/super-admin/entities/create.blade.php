@@ -64,7 +64,7 @@
                     <h5 class="mb-2 text-primary"><b>ISO Standards Accreditation</b></h5>
                     <p class="text-muted mb-3">{{ \App\CPU\translate('Select all ISO certifications applicable to this company entity') }}.</p>
                     <div class="iso-grid mb-2">
-                        @foreach($isoStandards as $code => $label)
+                        @forelse($isoStandards as $code => $label)
                             <label class="iso-card mb-0">
                                 <div>
                                     <div class="code">{{ $code }}</div>
@@ -73,10 +73,16 @@
                                 <input type="checkbox" name="iso_certifications[]" value="{{ $code }}"
                                        {{ in_array($code, (array) old('iso_certifications', []), true) ? 'checked' : '' }}>
                             </label>
-                        @endforeach
+                        @empty
+                            <div class="alert alert-warning mb-0">
+                                No active ISO standards found. Please add them from Super Admin &gt; ISO Standards.
+                            </div>
+                        @endforelse
                     </div>
                     @error('iso_certifications')<div class="text-danger small mb-2">{{ $message }}</div>@enderror
                     @error('iso_certifications.*')<div class="text-danger small mb-2">{{ $message }}</div>@enderror
+
+                    <div id="iso-checklist-sections" class="mt-3"></div>
 
                     <hr class="my-4">
                     <h5 class="mb-3">{{ \App\CPU\translate('Tenant admin') }} <span class="text-muted font-weight-normal">({{ \App\CPU\translate('first login for this entity') }})</span></h5>
@@ -112,3 +118,45 @@
         </div>
     </div>
 @endsection
+
+@push('script')
+    <script>
+        (function () {
+            const templatesByCode = @json($isoChecklistTemplates ?? []);
+            const checkboxes = Array.from(document.querySelectorAll('input[name="iso_certifications[]"]'));
+            const sectionsRoot = document.getElementById('iso-checklist-sections');
+            if (!sectionsRoot || !checkboxes.length) return;
+
+            const esc = (value) => String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+
+            const render = () => {
+                const selected = checkboxes.filter((box) => box.checked).map((box) => box.value);
+                const blocks = selected.map((code) => {
+                    const template = templatesByCode[code];
+                    if (!template) return '';
+
+                    const list = (template.items || []).map((item) => '<li>' + esc(item) + '</li>').join('');
+                    return [
+                        '<div class="card mt-3">',
+                        '<div class="card-body py-3">',
+                        '<h6 class="mb-1"><b>' + esc(code) + ' Checklist</b></h6>',
+                        '<p class="text-muted mb-2">Source: ' + esc(template.source || 'N/A') + '</p>',
+                        '<ul class="mb-0 pl-3">' + list + '</ul>',
+                        '</div>',
+                        '</div>',
+                    ].join('');
+                }).filter(Boolean);
+
+                sectionsRoot.innerHTML = blocks.join('');
+            };
+
+            checkboxes.forEach((box) => box.addEventListener('change', render));
+            render();
+        })();
+    </script>
+@endpush
