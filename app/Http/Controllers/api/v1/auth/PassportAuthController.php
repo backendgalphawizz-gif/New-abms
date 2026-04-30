@@ -349,6 +349,9 @@ class PassportAuthController extends Controller
             'technical_area' => optional($auditor->assessor)->technical_area,
             'experience' => optional($auditor->assessor)->experience,
             'home_address' => optional($auditor->assessor)->home_address,
+            'profile_status' => optional($auditor->assessor)->profile_status,
+            'profile_status_label' => static::auditorProfileStatusLabel(optional($auditor->assessor)->profile_status),
+            'remark' => optional($auditor->assessor)->remark,
         ];
 
         return response()->json([
@@ -690,5 +693,17 @@ class PassportAuthController extends Controller
             ];
         }
         return response()->json($response, 200);
+    }
+
+    private static function auditorProfileStatusLabel($status): string
+    {
+        switch ((int) $status) {
+            case 1:
+                return 'approved';
+            case 2:
+                return 'rejected';
+            default:
+                return 'pending';
+        }
     }
 }

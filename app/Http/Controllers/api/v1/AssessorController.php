@@ -28,6 +28,7 @@ use App\Model\RoomMessage;
 use App\Model\RoomUserMessage;
 
 use App\Model\Assessor;
+use App\Model\SuperAdmin;
 use App\Model\SchemeBiotechnologyBiobank;
 use App\Model\SchemeCalibrationLaboratory;
 use App\Model\SchemeForensicService;  
@@ -42,6 +43,7 @@ use App\Model\SchemeTestingLaboratory;
 use App\Model\SchemeValidationVerification;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 
 class AssessorController extends Controller
@@ -82,8 +84,28 @@ class AssessorController extends Controller
             'additional_information' => optional($assessorProfile)->additional_information,
             'professional_experience' => optional($assessorProfile)->professional_experience,
             'assessment_summery' => optional($assessorProfile)->assessment_summery,
+            'qualification_document' => optional($assessorProfile)->qualification_document,
+            'work_experience_document' => optional($assessorProfile)->work_experience_document,
+            'consultancy_document' => optional($assessorProfile)->consultancy_document,
+            'audit_document' => optional($assessorProfile)->audit_document,
+            'training_document' => optional($assessorProfile)->training_document,
+            'profile_status' => optional($assessorProfile)->profile_status,
+            'profile_status_label' => $this->assessorProfileStatusLabel(optional($assessorProfile)->profile_status),
+            'remark' => optional($assessorProfile)->remark,
         ];
         return response()->json($response);
+    }
+
+    private function assessorProfileStatusLabel($status): string
+    {
+        switch ((int) $status) {
+            case 1:
+                return 'approved';
+            case 2:
+                return 'rejected';
+            default:
+                return 'pending';
+        }
     }
 
     public function isoStandards()
@@ -278,7 +300,9 @@ class AssessorController extends Controller
 
         Admin::where(['id' => $assessor->id])->update($userDetails);
         $assessorDetails = [
-            'apply_designation' => $request['apply_designation'] ?? null,
+            'apply_designation' => $request->input('apply_designation')
+                ?? $request->input('designation')
+                ?? null,
             'highest_qualification' => $request['highest_qualification'] ?? null,
             'technical_area' => $request['technical_area'] ?? null,
             'experience' => $request['experience'] ?? 0,
@@ -296,11 +320,44 @@ class AssessorController extends Controller
 
         foreach ($optionalFieldMap as $column => $inputKey) {
             if (Schema::hasColumn('assessors', $column)) {
-                $assessorDetails[$column] = $request[$inputKey] ?? null;
+                $assessorDetails[$column] = $request->input($inputKey);
             }
         }
 
+        $documentFieldMap = [
+            'qualification_document' => 'qualification_document',
+            'work_experience_document' => 'work_experience_document',
+            'consultancy_document' => 'consultancy_document',
+            'audit_document' => 'audit_document',
+            'training_document' => 'training_document',
+        ];
+        foreach ($documentFieldMap as $column => $inputKey) {
+            if (!Schema::hasColumn('assessors', $column)) {
+                continue;
+            }
+            if ($request->hasFile($inputKey)) {
+                continue;
+            }
+            if (!$request->exists($inputKey)) {
+                continue;
+            }
+            $val = $request->input($inputKey);
+            $assessorDetails[$column] = ($val === '' || $val === null) ? null : $val;
+        }
+
         Assessor::updateOrCreate(['assessor_id' => $assessor->id], $assessorDetails);
+
+        $assessorProfileAfter = Assessor::where('assessor_id', $assessor->id)->first();
+        if ($assessorProfileAfter !== null
+            && Schema::hasColumn('assessors', 'profile_status')
+            && Schema::hasColumn('assessors', 'remark')
+            && (int) $assessorProfileAfter->profile_status !== 1
+        ) {
+            $assessorProfileAfter->profile_status = 0;
+            $assessorProfileAfter->remark = 'Submitted for admin review.';
+            $assessorProfileAfter->save();
+            $this->notifySuperAdminsAuditorProfileSubmitted($assessor);
+        }
 
         $assessor->refresh();
         $assessor->load('assessor');
@@ -327,9 +384,88 @@ class AssessorController extends Controller
                 'additional_information' => optional($assessor->assessor)->additional_information,
                 'professional_experience' => optional($assessor->assessor)->professional_experience,
                 'assessment_summery' => optional($assessor->assessor)->assessment_summery,
+                'qualification_document' => optional($assessor->assessor)->qualification_document,
+                'work_experience_document' => optional($assessor->assessor)->work_experience_document,
+                'consultancy_document' => optional($assessor->assessor)->consultancy_document,
+                'audit_document' => optional($assessor->assessor)->audit_document,
+                'training_document' => optional($assessor->assessor)->training_document,
+                'profile_status' => optional($assessor->assessor)->profile_status,
+                'profile_status_label' => $this->assessorProfileStatusLabel(optional($assessor->assessor)->profile_status),
+                'remark' => optional($assessor->assessor)->remark,
             ],
         ];
         return response()->json($response, 200);
+    }
+
+    /**
+     * Uploads optional profile image + documents and saves filenames.
+     */
+    public function uploadProfileDocuments(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
+            'qualification_document' => 'nullable|file|max:10240',
+            'work_experience_document' => 'nullable|file|max:10240',
+            'consultancy_document' => 'nullable|file|max:10240',
+            'audit_document' => 'nullable|file|max:10240',
+            'training_document' => 'nullable|file|max:10240',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Invalid upload payload',
+                'errors' => Helpers::error_processor($validator),
+            ], 422);
+        }
+
+        $documentFieldMap = [
+            'qualification_document' => 'qualification_document',
+            'work_experience_document' => 'work_experience_document',
+            'consultancy_document' => 'consultancy_document',
+            'audit_document' => 'audit_document',
+            'training_document' => 'training_document',
+        ];
+
+        $data = [];
+        foreach ($documentFieldMap as $responseKey => $inputKey) {
+            if (!$request->hasFile($inputKey)) {
+                continue;
+            }
+
+            $file = $request->file($inputKey);
+            $extension = $file->getClientOriginalExtension() ?: 'pdf';
+            $data[$responseKey] = ImageManager::upload('media/', $extension, $file);
+        }
+
+        $admin = $this->assessor;
+        if ($request->hasFile('image')) {
+            $admin->image = ImageManager::update('admin/', $admin->image, 'png', $request->file('image'));
+            $admin->save();
+            $data['image'] = $admin->image;
+            $data['image_url'] = $admin->image ? asset('storage/app/public/admin/' . $admin->image) : '';
+        }
+
+        if (!empty($data)) {
+            $assessorProfile = Assessor::firstOrCreate(['assessor_id' => $admin->id]);
+
+            $updates = [];
+            foreach ($data as $column => $fileName) {
+                if (Schema::hasColumn('assessors', $column)) {
+                    $updates[$column] = $fileName;
+                }
+            }
+
+            if (!empty($updates)) {
+                $assessorProfile->update($updates);
+            }
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => empty($data) ? 'No files uploaded' : 'File(s) stored successfully',
+            'data' => $data,
+        ]);
     }
 
     public function getApplications(Request $request){
@@ -1696,5 +1832,32 @@ class AssessorController extends Controller
         }
         
         return response()->json($response);  
+    }
+
+    private function notifySuperAdminsAuditorProfileSubmitted(Admin $auditor): void
+    {
+        try {
+            $emails = SuperAdmin::query()
+                ->whereNotNull('email')
+                ->pluck('email')
+                ->filter()
+                ->unique()
+                ->values();
+
+            if ($emails->isEmpty()) {
+                return;
+            }
+
+            $body = "Auditor {$auditor->name} ({$auditor->email}) has submitted their profile for review.\n\n"
+                .'Review this auditor in Super Admin → Auditors.';
+
+            foreach ($emails as $email) {
+                Mail::raw($body, function ($message) use ($email, $auditor) {
+                    $message->to($email)->subject('Auditor profile pending review: '.$auditor->name);
+                });
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }

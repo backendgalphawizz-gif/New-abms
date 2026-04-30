@@ -67,6 +67,7 @@ Route::group(['namespace' => 'SuperAdmin', 'prefix' => 'super-admin', 'as' => 's
         Route::post('auditors', 'AuditorController@store')->name('auditors.store');
         Route::get('auditors/{id}/edit', 'AuditorController@edit')->name('auditors.edit');
         Route::put('auditors/{id}', 'AuditorController@update')->name('auditors.update');
+        Route::post('auditors/{id}/profile-review', 'AuditorController@reviewProfile')->name('auditors.profile-review');
         Route::get('auditors/{id}/status/{status}', 'AuditorController@status')->name('auditors.status');
         Route::delete('auditors/{id}', 'AuditorController@destroy')->name('auditors.destroy');
     });

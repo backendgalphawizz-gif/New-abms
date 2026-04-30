@@ -126,6 +126,60 @@
                         </div>
                     </div>
 
+                    <hr>
+                    <h4 class="mb-3">Extended profile <small class="text-muted">(same as mobile update-profile API)</small></h4>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label>Residence telephone</label>
+                            <input type="text" name="residence_tel" value="{{ old('residence_tel', data_get($assessor, 'residence_tel')) }}" class="form-control">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Training</label>
+                            <input type="text" name="training" value="{{ old('training', data_get($assessor, 'training')) }}" class="form-control">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Specific knowledge gained</label>
+                            <textarea name="specific_knowledge_gained" rows="2" class="form-control">{{ old('specific_knowledge_gained', data_get($assessor, 'specific_knowledge_gained')) }}</textarea>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Additional information</label>
+                            <textarea name="additional_information" rows="2" class="form-control">{{ old('additional_information', data_get($assessor, 'additional_information')) }}</textarea>
+                        </div>
+                    </div>
+
+                    @php
+                        $peRows = old('professional_experience');
+                        if (!is_array($peRows)) {
+                            $peRows = null;
+                        }
+                        if ($peRows === null && $assessor) {
+                            $rawPe = data_get($assessor, 'professional_experience');
+                            $peRows = is_array($rawPe) ? $rawPe : [];
+                        }
+                        if ($peRows === null) {
+                            $peRows = [];
+                        }
+                        if (count($peRows) === 0) {
+                            $peRows = [[]];
+                        }
+                        $asRows = old('assessment_summery');
+                        if (!is_array($asRows)) {
+                            $asRows = null;
+                        }
+                        if ($asRows === null && $assessor) {
+                            $rawAs = data_get($assessor, 'assessment_summery');
+                            $asRows = is_array($rawAs) ? $rawAs : [];
+                        }
+                        if ($asRows === null) {
+                            $asRows = [];
+                        }
+                        if (count($asRows) === 0) {
+                            $asRows = [[]];
+                        }
+                    @endphp
+                    @include('super-admin.auditors.partials.profile-experience-assessment', compact('peRows', 'asRows'))
+                    @include('super-admin.auditors.partials.profile-documents', ['assessor' => $assessor])
+
                     <div class="d-flex justify-content-end mt-4">
                         <a href="{{ route('super-admin.auditors.index') }}" class="btn btn-secondary mr-2">Cancel</a>
                         <button type="submit" class="btn btn--primary">Update Auditor</button>
@@ -138,6 +192,44 @@
                 </form>
             </div>
         </div>
+
+        @if($assessor && \Illuminate\Support\Facades\Schema::hasTable('assessors')
+            && \Illuminate\Support\Facades\Schema::hasColumn('assessors', 'profile_status')
+            && \Illuminate\Support\Facades\Schema::hasColumn('assessors', 'remark'))
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h4 class="mb-3">Auditor profile review</h4>
+                    <p class="mb-2">
+                        <strong>Profile status:</strong>
+                        @php $ps = (int) data_get($assessor, 'profile_status', 0); @endphp
+                        @if($ps === 1)
+                            <span class="badge badge-soft-success">Approved</span>
+                        @elseif($ps === 2)
+                            <span class="badge badge-soft-danger">Rejected</span>
+                        @else
+                            <span class="badge badge-soft-warning">Pending</span>
+                        @endif
+                    </p>
+                    <p class="mb-3 text-muted">{{ data_get($assessor, 'remark') ?: '—' }}</p>
+
+                    <form method="post" action="{{ route('super-admin.auditors.profile-review', $auditor->id) }}" class="border-top pt-3">
+                        @csrf
+                        <div class="form-group">
+                            <label>Action</label>
+                            <select name="action" class="form-control" required>
+                                <option value="approve">Approve profile</option>
+                                <option value="reject">Reject profile</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Reason (required if rejecting)</label>
+                            <textarea name="reject_reason" class="form-control" rows="3" placeholder="Explain why the profile is not approved">{{ old('reject_reason') }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn--primary">Save review</button>
+                    </form>
+                </div>
+            </div>
+        @endif
     </div>
 @endsection
 

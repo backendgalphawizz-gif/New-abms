@@ -103,6 +103,7 @@ Route::group(['namespace' => 'api\v1', 'prefix' => 'v1', 'middleware' => ['api_l
         Route::delete('delete-chat/{id}','AssessorController@deleteChat');
 
         Route::post('update-profile','AssessorController@updateProfile');
+        Route::post('upload-profile-documents','AssessorController@uploadProfileDocuments');
         Route::post('update-resume','AssessorController@updateResume');
 
         Route::get('get-applications','AssessorController@getApplications');

@@ -71,6 +71,44 @@
                         </div>
                     </div>
 
+                    <hr>
+                    <h4 class="mb-3">Extended profile <small class="text-muted">(same as mobile update-profile API)</small></h4>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label>Residence telephone</label>
+                            <input type="text" name="residence_tel" value="{{ old('residence_tel') }}" class="form-control" placeholder="e.g. 01122334455">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Training</label>
+                            <input type="text" name="training" value="{{ old('training') }}" class="form-control">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Specific knowledge gained</label>
+                            <textarea name="specific_knowledge_gained" rows="2" class="form-control">{{ old('specific_knowledge_gained') }}</textarea>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Additional information</label>
+                            <textarea name="additional_information" rows="2" class="form-control">{{ old('additional_information') }}</textarea>
+                        </div>
+                    </div>
+
+                    @php
+                        $peRows = old('professional_experience');
+                        if (!is_array($peRows)) {
+                            $peRows = [[]];
+                        } elseif (count($peRows) === 0) {
+                            $peRows = [[]];
+                        }
+                        $asRows = old('assessment_summery');
+                        if (!is_array($asRows)) {
+                            $asRows = [[]];
+                        } elseif (count($asRows) === 0) {
+                            $asRows = [[]];
+                        }
+                    @endphp
+                    @include('super-admin.auditors.partials.profile-experience-assessment', compact('peRows', 'asRows'))
+                    @include('super-admin.auditors.partials.profile-documents', ['assessor' => null])
+
                     <div class="form-group mt-3">
                         <label class="checkbox-inline">
                             <input type="checkbox" name="sync_to_tenants" value="1" checked>

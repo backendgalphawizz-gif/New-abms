@@ -34,6 +34,8 @@
                         <th>Designation</th>
                         <th>Qualification</th>
                         <th>Experience</th>
+                        <th>Profile</th>
+                        <th>Remark</th>
                         <th>Status</th>
                         <th class="text-center">Action</th>
                     </tr>
@@ -56,6 +58,23 @@
                             <td>{{ $hasAssessorsTable ? data_get($auditor, 'assessor.apply_designation', '—') : '—' }}</td>
                             <td>{{ $hasAssessorsTable ? data_get($auditor, 'assessor.highest_qualification', '—') : '—' }}</td>
                             <td>{{ $hasAssessorsTable ? (data_get($auditor, 'assessor.experience', 0) . ' yrs') : '—' }}</td>
+                            <td>
+                                @if($hasAssessorsTable)
+                                    @php $ps = (int) data_get($auditor, 'assessor.profile_status', 0); @endphp
+                                    @if($ps === 1)
+                                        <span class="badge badge-soft-success">Approved</span>
+                                    @elseif($ps === 2)
+                                        <span class="badge badge-soft-danger">Rejected</span>
+                                    @else
+                                        <span class="badge badge-soft-warning">Pending</span>
+                                    @endif
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td class="text-muted small" style="max-width:200px;">
+                                {{ $hasAssessorsTable ? \Illuminate\Support\Str::limit((string) data_get($auditor, 'assessor.remark'), 48) : '—' }}
+                            </td>
                             <td>
                                 @if((int)$auditor->status === 1)
                                     <span class="badge badge-soft-success">Active</span>
@@ -81,7 +100,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="text-center text-muted py-4">No auditors found.</td>
+                            <td colspan="12" class="text-center text-muted py-4">No auditors found.</td>
                         </tr>
                     @endforelse
                     </tbody>
