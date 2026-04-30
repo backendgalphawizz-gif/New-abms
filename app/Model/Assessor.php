@@ -22,6 +22,13 @@ class Assessor extends Model
         'additional_information',
         'professional_experience',
         'assessment_summery',
+        'qualification_document',
+        'work_experience_document',
+        'consultancy_document',
+        'audit_document',
+        'training_document',
+        'profile_status',
+        'remark',
     ];
 
     protected $casts = [

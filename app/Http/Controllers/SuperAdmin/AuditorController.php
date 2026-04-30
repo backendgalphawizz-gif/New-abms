@@ -47,19 +47,7 @@ class AuditorController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:120',
-            'email' => 'required|email|max:120|unique:admins,email',
-            'phone' => 'required|string|max:30|unique:admins,phone',
-            'password' => 'required|string|min:8|confirmed',
-            'apply_designation' => 'nullable|string|max:191',
-            'highest_qualification' => 'nullable|string|max:191',
-            'technical_area' => 'nullable|string|max:191',
-            'experience' => 'nullable|integer|min:0|max:80',
-            'home_address' => 'nullable|string|max:500',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
-            'sync_to_tenants' => 'nullable|boolean',
-        ]);
+        $request->validate($this->auditorFormValidationRules());
 
         DB::beginTransaction();
         try {
@@ -84,11 +72,13 @@ class AuditorController extends Controller
             if (Schema::hasTable('assessors')) {
                 $assessor = new Assessor();
                 $assessor->assessor_id = $admin->id;
-                $assessor->apply_designation = $request->apply_designation;
-                $assessor->highest_qualification = $request->highest_qualification;
-                $assessor->technical_area = $request->technical_area;
-                $assessor->experience = $request->experience ?? 0;
-                $assessor->home_address = $request->home_address;
+                if (Schema::hasColumn('assessors', 'profile_status')) {
+                    $assessor->profile_status = 0;
+                }
+                if (Schema::hasColumn('assessors', 'remark')) {
+                    $assessor->remark = 'Profile not updated';
+                }
+                $this->fillAssessorProfileFromRequest($request, $assessor);
                 $assessor->save();
             }
 
@@ -128,18 +118,7 @@ class AuditorController extends Controller
             ->where('admin_role_id', 3)
             ->findOrFail($id);
 
-        $request->validate([
-            'name' => 'required|string|max:120',
-            'email' => ['required', 'email', 'max:120', Rule::unique('admins', 'email')->ignore($auditor->id)],
-            'phone' => ['required', 'string', 'max:30', Rule::unique('admins', 'phone')->ignore($auditor->id)],
-            'password' => 'nullable|string|min:8|confirmed',
-            'apply_designation' => 'nullable|string|max:191',
-            'highest_qualification' => 'nullable|string|max:191',
-            'technical_area' => 'nullable|string|max:191',
-            'experience' => 'nullable|integer|min:0|max:80',
-            'home_address' => 'nullable|string|max:500',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
-        ]);
+        $request->validate($this->auditorFormValidationRules($auditor->id));
 
         DB::beginTransaction();
         try {
@@ -169,11 +148,7 @@ class AuditorController extends Controller
                     $assessor->assessor_id = $auditor->id;
                 }
 
-                $assessor->apply_designation = $request->apply_designation;
-                $assessor->highest_qualification = $request->highest_qualification;
-                $assessor->technical_area = $request->technical_area;
-                $assessor->experience = $request->experience ?? 0;
-                $assessor->home_address = $request->home_address;
+                $this->fillAssessorProfileFromRequest($request, $assessor);
                 $assessor->save();
             }
 
@@ -187,6 +162,47 @@ class AuditorController extends Controller
 
         Toastr::success('Auditor updated successfully.');
         return redirect()->route('super-admin.auditors.index');
+    }
+
+    public function reviewProfile(Request $request, $id)
+    {
+        $auditor = Admin::query()
+            ->where('admin_role_id', 3)
+            ->findOrFail($id);
+
+        if (!Schema::hasTable('assessors')) {
+            Toastr::error('Assessors table not available.');
+            return redirect()->route('super-admin.auditors.index');
+        }
+
+        $request->validate([
+            'action' => 'required|in:approve,reject',
+            'reject_reason' => 'required_if:action,reject|nullable|string|max:2000',
+        ]);
+
+        $assessor = Assessor::query()->where('assessor_id', $auditor->id)->first();
+        if (!$assessor) {
+            Toastr::error('Assessor profile record not found.');
+            return redirect()->route('super-admin.auditors.edit', $auditor->id);
+        }
+
+        if (!Schema::hasColumn('assessors', 'profile_status') || !Schema::hasColumn('assessors', 'remark')) {
+            Toastr::error('Run database migrations: profile_status / remark columns are missing.');
+            return redirect()->route('super-admin.auditors.edit', $auditor->id);
+        }
+
+        if ($request->input('action') === 'approve') {
+            $assessor->profile_status = 1;
+            $assessor->remark = 'Approved';
+        } else {
+            $assessor->profile_status = 2;
+            $assessor->remark = $request->input('reject_reason', 'Not approved');
+        }
+
+        $assessor->save();
+
+        Toastr::success('Profile review saved.');
+        return redirect()->route('super-admin.auditors.edit', $auditor->id);
     }
 
     public function status($id, $status)
@@ -231,6 +247,170 @@ class AuditorController extends Controller
         return redirect()->route('super-admin.auditors.index');
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    private function auditorFormValidationRules(?int $adminId = null): array
+    {
+        $emailRule = ['required', 'email', 'max:120', 'unique:admins,email'];
+        $phoneRule = ['required', 'string', 'max:30', 'unique:admins,phone'];
+        if ($adminId !== null) {
+            $emailRule = ['required', 'email', 'max:120', Rule::unique('admins', 'email')->ignore($adminId)];
+            $phoneRule = ['required', 'string', 'max:30', Rule::unique('admins', 'phone')->ignore($adminId)];
+        }
+
+        $rules = [
+            'name' => 'required|string|max:120',
+            'email' => $emailRule,
+            'phone' => $phoneRule,
+            'apply_designation' => 'nullable|string|max:191',
+            'highest_qualification' => 'nullable|string|max:191',
+            'technical_area' => 'nullable|string|max:191',
+            'experience' => 'nullable|integer|min:0|max:80',
+            'home_address' => 'nullable|string|max:2000',
+            'residence_tel' => 'nullable|string|max:191',
+            'training' => 'nullable|string|max:5000',
+            'specific_knowledge_gained' => 'nullable|string|max:5000',
+            'additional_information' => 'nullable|string|max:5000',
+            'professional_experience' => 'nullable|array',
+            'professional_experience.*' => 'nullable|array',
+            'assessment_summery' => 'nullable|array',
+            'assessment_summery.*' => 'nullable|array',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
+            'qualification_document' => 'nullable|file|max:10240',
+            'work_experience_document' => 'nullable|file|max:10240',
+            'consultancy_document' => 'nullable|file|max:10240',
+            'audit_document' => 'nullable|file|max:10240',
+            'training_document' => 'nullable|file|max:10240',
+        ];
+
+        if ($adminId === null) {
+            $rules['password'] = 'required|string|min:8|confirmed';
+            $rules['sync_to_tenants'] = 'nullable|boolean';
+        } else {
+            $rules['password'] = 'nullable|string|min:8|confirmed';
+        }
+
+        return $rules;
+    }
+
+    private function fillAssessorProfileFromRequest(Request $request, Assessor $assessor): void
+    {
+        $assessor->apply_designation = $request->apply_designation;
+        $assessor->highest_qualification = $request->highest_qualification;
+        $assessor->technical_area = $request->technical_area;
+        $assessor->experience = $request->experience ?? 0;
+        $assessor->home_address = $request->home_address;
+
+        foreach ([
+            'residence_tel',
+            'training',
+            'specific_knowledge_gained',
+            'additional_information',
+        ] as $col) {
+            if (Schema::hasColumn('assessors', $col)) {
+                $assessor->{$col} = $request->input($col);
+            }
+        }
+
+        if (Schema::hasColumn('assessors', 'professional_experience')) {
+            $assessor->professional_experience = $this->normalizeStructuredRows($request->input('professional_experience'));
+        }
+        if (Schema::hasColumn('assessors', 'assessment_summery')) {
+            $assessor->assessment_summery = $this->normalizeStructuredRows($request->input('assessment_summery'));
+        }
+
+        $docFields = [
+            'qualification_document',
+            'work_experience_document',
+            'consultancy_document',
+            'audit_document',
+            'training_document',
+        ];
+        foreach ($docFields as $field) {
+            if (!Schema::hasColumn('assessors', $field)) {
+                continue;
+            }
+            if ($request->hasFile($field)) {
+                $file = $request->file($field);
+                $ext = strtolower((string) $file->getClientOriginalExtension()) ?: 'pdf';
+                $assessor->{$field} = ImageManager::upload('media/', $ext, $file);
+            }
+        }
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function normalizeStructuredRows($raw): ?array
+    {
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        $rows = is_array($raw) ? $raw : $this->decodeJsonInput($raw);
+        if (!is_array($rows)) {
+            return null;
+        }
+
+        $out = [];
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            if (!$this->structuredRowHasAnyValue($row)) {
+                continue;
+            }
+            $out[] = $this->trimStructuredRow($row);
+        }
+
+        return count($out) > 0 ? array_values($out) : null;
+    }
+
+    private function structuredRowHasAnyValue(array $row): bool
+    {
+        foreach ($row as $value) {
+            if (is_array($value)) {
+                if ($this->structuredRowHasAnyValue($value)) {
+                    return true;
+                }
+            } elseif ($value !== null && trim((string) $value) !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function trimStructuredRow(array $row): array
+    {
+        $trimmed = [];
+        foreach ($row as $key => $value) {
+            $trimmed[$key] = is_string($value) ? trim($value) : $value;
+        }
+
+        return $trimmed;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function decodeJsonInput($raw)
+    {
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+        if (is_array($raw)) {
+            return $raw;
+        }
+        $decoded = json_decode((string) $raw, true);
+
+        return is_array($decoded) ? $decoded : null;
+    }
+
     private function syncAuditorToTenants(Request $request): void
     {
         $entities = Entity::query()->get();
@@ -258,7 +438,8 @@ class AuditorController extends Controller
                     ]);
 
                     if (DB::getSchemaBuilder()->hasTable('assessors')) {
-                        DB::table('assessors')->insert([
+                        $schema = DB::getSchemaBuilder();
+                        $insert = [
                             'assessor_id' => $adminId,
                             'apply_designation' => $request->apply_designation,
                             'highest_qualification' => $request->highest_qualification,
@@ -267,7 +448,24 @@ class AuditorController extends Controller
                             'home_address' => $request->home_address,
                             'created_at' => now(),
                             'updated_at' => now(),
-                        ]);
+                        ];
+                        if ($schema->hasColumn('assessors', 'profile_status')) {
+                            $insert['profile_status'] = 0;
+                        }
+                        if ($schema->hasColumn('assessors', 'remark')) {
+                            $insert['remark'] = 'Profile not updated';
+                        }
+                        foreach ([
+                            'residence_tel',
+                            'training',
+                            'specific_knowledge_gained',
+                            'additional_information',
+                        ] as $col) {
+                            if ($schema->hasColumn('assessors', $col)) {
+                                $insert[$col] = $request->input($col);
+                            }
+                        }
+                        DB::table('assessors')->insert($insert);
                     }
                 });
             } catch (\Throwable $e) {

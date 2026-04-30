@@ -14,5 +14,6 @@ Route::group(['namespace' => 'api\v1', 'prefix' => 'v1', 'middleware' => ['api_l
         Route::get('get-profile', 'AssessorController@getProfile');
         Route::get('iso-standards', 'AssessorController@isoStandards');
         Route::post('update-profile', 'AssessorController@updateProfile');
+        Route::post('upload-profile-documents', 'AssessorController@uploadProfileDocuments');
     });
 });
